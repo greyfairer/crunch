@@ -73,8 +73,10 @@ public class TotalOrderPartitioner<K, V> extends Partitioner<K, V> implements Co
           (RawComparator<K>) job.getSortComparator();
       K[] splitPoints = readPartitions(fs, partFile, keyClass, conf, comparator);
       int numReduceTasks = job.getNumReduceTasks();
-      if (splitPoints.length != numReduceTasks - 1) {
-        throw new IOException("Wrong number of partitions in keyset");
+      if (splitPoints.length > numReduceTasks - 1) {
+        throw new IOException(String.format(
+            "Wrong number of partitions in keyset: expected %d, got %d",
+            numReduceTasks - 1, splitPoints.length));
       }
       partitions = new BinarySearchNode(splitPoints, comparator);
     } catch (IOException e) {

@@ -28,8 +28,10 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.crunch.DoFn;
 import org.apache.crunch.Emitter;
+import org.apache.crunch.FilterFn;
 import org.apache.crunch.MapFn;
 import org.apache.crunch.PCollection;
 import org.apache.crunch.PTable;
@@ -39,6 +41,7 @@ import org.apache.crunch.Tuple3;
 import org.apache.crunch.Tuple4;
 import org.apache.crunch.TupleN;
 import org.apache.crunch.impl.mr.MRPipeline;
+import org.apache.crunch.io.To;
 import org.apache.crunch.lib.Sort.ColumnOrder;
 import org.apache.crunch.lib.Sort.Order;
 import org.apache.crunch.test.StringWrapper;
@@ -49,14 +52,74 @@ import org.apache.crunch.types.PTypeFamily;
 import org.apache.crunch.types.avro.AvroTypeFamily;
 import org.apache.crunch.types.avro.Avros;
 import org.apache.crunch.types.writable.WritableTypeFamily;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
 
 public class SortIT implements Serializable {
+
+  private static MiniMRYarnCluster miniMRYarnCluster;
+  private transient Configuration yarnConf;
+
+  @BeforeClass
+  public static void setUpBeforeClass() {
+    // We start up a mini cluster here to allow testing with multiple reducers (the local job tracker only allows
+    // running with a single reducer)
+    miniMRYarnCluster = new MiniMRYarnCluster("SortIT");
+    miniMRYarnCluster.init(new Configuration());
+    miniMRYarnCluster.start();
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws IOException {
+    miniMRYarnCluster.stop();
+  }
+
+  @Before
+  public void setUp() {
+    yarnConf = new Configuration(miniMRYarnCluster.getConfig());
+  }
+
   @Rule
   public transient TemporaryPath tmpDir = TemporaryPaths.create();
+
+  @Test
+  public void testSort() throws IOException {
+    runSingle(new MRPipeline(SortIT.class, tmpDir.getDefaultConfiguration()), WritableTypeFamily.getInstance(), Order.ASCENDING,
+        "A\tand this text as well");
+  }
+
+  /**
+   * Test an edge case where we try to sort with more reducers than entries to be sorted. In this case, we need to
+   * fall back to using a single reducer, as the TotalOrderPartitioner needs to have at least numReducers - 1 partition
+   * definitions.
+   */
+  @Test
+  public void testSort_MoreReducersThanRecords() throws IOException {
+    Pipeline pipeline = new MRPipeline(SortIT.class, yarnConf);
+
+    String inputPath = tmpDir.copyResourceFileName("docs.txt");
+
+    PCollection<String> lines = pipeline.readTextFile(inputPath)
+        // Reduce things down to there only being a single record to sort (which is fewer than the configured
+        // number of reducers)
+        .filter(new FilterFn<String>() {
+          @Override
+          public boolean accept(String input) {
+            return "A\tbut also this".equals(input);
+          }
+        });
+    PCollection<String> sorted = Sort.sort(lines, 3, Order.ASCENDING);
+    Iterable<String> sortedLinesIterable = sorted.materialize();
+    assertEquals(ImmutableList.of("A\tbut also this"), ImmutableList.copyOf(sortedLinesIterable));
+    pipeline.done();
+  }
 
   @Test
   public void testWritableSortAsc() throws Exception {
