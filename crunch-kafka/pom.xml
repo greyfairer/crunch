@@ -40,7 +40,16 @@ under the License.
     </dependency>
     <dependency>
       <groupId>org.apache.kafka</groupId>
-      <artifactId>kafka_2.10</artifactId>
+      <artifactId>kafka_${scala.base.version}</artifactId>
+      <exclusions>
+        <exclusion>
+          <!-- The ZooKeeper exclusion is because Cloudera's
+               1.0.1-kafka-3.1.0 pom contains (presumably by error) a dependency
+               on a snapshot version of ZooKeeper, 3.4.5-cdh5.15.0-SNAPSHOT -->
+          <groupId>org.apache.zookeeper</groupId>
+          <artifactId>zookeeper</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.scala-lang</groupId>
