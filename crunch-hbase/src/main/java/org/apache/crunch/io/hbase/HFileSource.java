@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.mapreduce.KeyValueSerialization;
 import org.apache.hadoop.hbase.mapreduce.MutationSerialization;
 import org.apache.hadoop.hbase.mapreduce.ResultSerialization;
-import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.mapreduce.Job;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,7 +79,6 @@ public class HFileSource extends FileSourceImpl<KeyValue> implements ReadableSou
 
   @Override
   public void configureSource(Job job, int inputId) throws IOException {
-    TableMapReduceUtil.addDependencyJars(job);
     Configuration conf = job.getConfiguration();
     conf.setStrings("io.serializations", conf.get("io.serializations"),
         MutationSerialization.class.getName(), ResultSerialization.class.getName(),

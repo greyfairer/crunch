@@ -106,7 +106,6 @@ public class HBaseTarget implements MapReduceTarget {
     Class<?> typeClass = ptype.getTypeClass(); // Either Put or Delete
     
     try {
-      TableMapReduceUtil.addDependencyJars(job);
       TableMapReduceUtil.initCredentials(job);
       FileOutputFormat.setOutputPath(job, outputPath);
     } catch (IOException e) {

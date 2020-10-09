@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.MultiTableInputFormat;
 import org.apache.hadoop.hbase.mapreduce.MultiTableInputFormatBase;
 import org.apache.hadoop.hbase.mapreduce.ResultSerialization;
-import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Base64;
@@ -159,8 +158,7 @@ public class HBaseSourceTarget extends HBaseTarget implements
   }
 
   @Override
-  public void configureSource(Job job, int inputId) throws IOException {
-    TableMapReduceUtil.addDependencyJars(job);
+  public void configureSource(Job job, int inputId) {
     Configuration conf = job.getConfiguration();
     conf.setStrings("io.serializations", conf.get("io.serializations"),
         ResultSerialization.class.getName());
